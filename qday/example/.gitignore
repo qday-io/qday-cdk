@@ -1,0 +1,7 @@
+.env
+data/
+# Ignore user-provided keystores, but ship the bundled test keystores
+# (public Hardhat keys, password "testonly") so the example runs out of the box.
+keystores/*
+!keystores/sequencer.keystore
+!keystores/aggregator.keystore

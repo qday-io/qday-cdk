@@ -1,0 +1,104 @@
+# =============================================================================
+# CDK Example - sequence-sender + aggregator (separate services)
+# =============================================================================
+# Prerequisites:
+#   1. L1 chain with zkEVM contracts deployed (RollupManager, Bridge, GER, etc)
+#      Update contract addresses in cdk-node-config.toml after deployment
+#   2. Test keystore files are bundled in ./keystores/ (Hardhat test keys,
+#      password "testonly"). Replace with your own keystores for production.
+#   3. L2 node (cdk-erigon) must be running externally, providing:
+#        - RPC port (default 8123)
+#        - Data Streamer port (default 6900)
+#   4. ZK prover (zkevm-prover) is started as a compose service below.
+#      It connects to the aggregator's gRPC port (50081) as a client.
+#
+# Usage:
+#   cp env-example .env
+#   docker compose -f qday/example/docker-compose.yml up -d
+#   # (image is pulled from ghcr.io by default; see env-example to override)
+#
+# View logs:
+#   docker compose -f qday/example/docker-compose.yml logs -f
+# =============================================================================
+
+networks:
+  cdk-net:
+    driver: bridge
+
+services:
+  # ---- ZK Prover -------------------------------------------------------------
+  # Stateless ZK prover. Acts as a gRPC client and connects to the aggregator
+  # (aggregatorClientHost in prover.config.json must match the aggregator
+  #  container name, here "cdk-aggregator").
+  zkevm-prover:
+    image: ${ZKEVM_PROVER_IMAGE}
+    container_name: cdk-zkevm-prover
+    volumes:
+      - ./prover.config.json:/usr/src/app/config.json:ro
+      - ./data/prover:/app/output
+    command: >
+      zkProver -c /usr/src/app/config.json
+    networks:
+      - cdk-net
+    restart: unless-stopped
+
+  # ---- Sequence Sender -------------------------------------------------------
+  # Sends L2 batches to L1 rollup contract
+  sequence-sender:
+    image: ${CDK_NODE_IMAGE}
+    container_name: cdk-sequence-sender
+    command:
+      - "cdk-node"
+      - "run"
+      - "--cfg"
+      - "/app/config/cdk-node-config.toml"
+      - "--components"
+      - "sequence-sender"
+    environment:
+      - CDK_LOG_LEVEL=${CDK_LOG_LEVEL:-info}
+    volumes:
+      - ./cdk-node-config.toml:/app/config/cdk-node-config.toml:ro
+      - ./keystores:/app/keystores:ro
+      - ./data/sequence-sender:/app/data
+    networks:
+      - cdk-net
+    healthcheck:
+      test: ["CMD", "pgrep", "cdk-node"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  # ---- Aggregator ------------------------------------------------------------
+  # Generates and settles ZK proofs to L1 or AggLayer
+  aggregator:
+    image: ${CDK_NODE_IMAGE}
+    container_name: cdk-aggregator
+    command:
+      - "cdk-node"
+      - "run"
+      - "--cfg"
+      - "/app/config/cdk-node-config.toml"
+      - "--components"
+      - "aggregator"
+    environment:
+      - CDK_LOG_LEVEL=${CDK_LOG_LEVEL:-info}
+    volumes:
+      - ./cdk-node-config.toml:/app/config/cdk-node-config.toml:ro
+      - ./keystores:/app/keystores:ro
+      - ./data/aggregator:/app/data
+    networks:
+      - cdk-net
+    ports:
+      - "50081:50081"
+    healthcheck:
+      test: ["CMD", "pgrep", "cdk-node"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      zkevm-prover:
+        condition: service_started
+    restart: unless-stopped
