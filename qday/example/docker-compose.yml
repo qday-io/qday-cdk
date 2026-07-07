@@ -39,7 +39,7 @@ services:
     container_name: cdk-zkevm-prover
     volumes:
       - ./prover.config.json:/usr/src/app/config.json:ro
-      - ./prover-config:/usr/src/app/config:ro
+      - ./prover-config:/usr/src/app/config
       - ./data/prover:/app/output
     command: >
       zkProver -c /usr/src/app/config.json

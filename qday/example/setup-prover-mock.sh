@@ -70,6 +70,9 @@ FILES=(
     # final
     "final/final.verifier.dat"
     "final/final.fflonk.zkey"
+    # scripts
+    "scripts/keccak_script.json"
+    "scripts/storage_sm_rom.json"
 )
 
 echo "Creating dummy prover config files for mock mode..."
