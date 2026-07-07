@@ -34,15 +34,23 @@ L1 chain and contract addresses. These are **required** and must be filled in af
 
 ## [NetworkConfig.L1]
 
-Alternative L1 contract configuration (may duplicate [L1Config]).
+> **Note**: This section is **auto-generated** from `[L1Config]` during config rendering (see `config/default.go:322`). You do **not** need to set it in your config file. The renderer maps:
+>
+> - `L1Config.chainId` → `NetworkConfig.L1.L1ChainID`
+> - `L1Config.polTokenAddress` → `NetworkConfig.L1.PolAddr`
+> - `L1Config.polygonZkEVMAddress` → `NetworkConfig.L1.ZkEVMAddr`
+> - `L1Config.polygonRollupManagerAddress` → `NetworkConfig.L1.RollupManagerAddr`
+> - `L1Config.polygonZkEVMGlobalExitRootAddress` → `NetworkConfig.L1.GlobalExitRootManagerAddr`
+
+Only set `[L1Config]` in your config file; `[NetworkConfig.L1]` is populated automatically.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `L1ChainID` | uint64 | `0` | L1 chain ID. |
-| `PolAddr` | address | `0x0` | POL token address. |
-| `ZkEVMAddr` | address | `0x0` | zkEVM rollup contract address. |
-| `RollupManagerAddr` | address | `0x0` | Rollup Manager contract address. |
-| `GlobalExitRootManagerAddr` | address | `0x0` | Global Exit Root Manager contract address. |
+| `L1ChainID` | uint64 | `0` | L1 chain ID (auto from `L1Config.chainId`). |
+| `PolAddr` | address | `0x0` | POL token address (auto from `L1Config.polTokenAddress`). |
+| `ZkEVMAddr` | address | `0x0` | zkEVM rollup contract address (auto from `L1Config.polygonZkEVMAddress`). |
+| `RollupManagerAddr` | address | `0x0` | Rollup Manager contract address (auto from `L1Config.polygonRollupManagerAddress`). |
+| `GlobalExitRootManagerAddr` | address | `0x0` | Global Exit Root Manager contract address (auto from `L1Config.polygonZkEVMGlobalExitRootAddress`). |
 
 ## [SequenceSender]
 
@@ -147,7 +155,7 @@ L1 synchronization for the aggregator to track sequenced and virtualized batches
 | `[Aggregator.Synchronizer.Synchronizer]` | - | - | Sync behavior config. |
 | `SyncInterval` | duration | `"10s"` | How often to sync new blocks from L1. |
 | `SyncChunkSize` | uint64 | `1000` | Number of blocks to fetch per sync cycle. |
-| `GenesisBlockNumber` | uint64 | `0` | Starting block for sync. |
+| `GenesisBlockNumber` | uint64 | `0` | **Required**. The block number on L1 where the `createRollup` transaction was mined. The aggregator starts syncing sequenced/virtualized batch events from this block. Use the `createRollupBlockNumber` from the `create_rollup_output.json`. |
 | `SyncUpToBlock` | string | `"finalized"` | Which block to sync up to. `"latest"`, `"finalized"`. |
 | `BlockFinality` | string | `"finalized"` | Block finality level. |
 | `OverrideStorageCheck` | bool | `false` | Skip storage consistency checks. |
@@ -193,7 +201,7 @@ Syncs the L1 Info Tree (Global Exit Roots, L1 Info Tree leaves).
 | `SyncBlockChunkSize` | uint64 | `100` | Blocks to process per sync cycle. |
 | `BlockFinality` | string | `"FinalizedBlock"` | Block finality level for synced data. |
 | `WaitForNewBlocksPeriod` | duration | `"5s"` | Wait interval when no new blocks are found. |
-| `InitialBlock` | uint64 | `0` | Starting block number for sync. |
+| `InitialBlock` | uint64 | `0` | **Required**. The block number on L1 where the GlobalExitRoot contract was deployed. The L1 Info Tree syncer starts listening for GER and RollupManager events from this block. Use the `deploymentRollupManagerBlockNumber` from the contract deployment output. This is typically **earlier** than `GenesisBlockNumber` because GER is deployed with RollupManager before `createRollup` is called. |
 | `RetryAfterErrorPeriod` | duration | `"10s"` | Wait time before retrying after an error. |
 | `MaxRetryAttemptsAfterError` | int | `0` | Max retry attempts (0 = unlimited). |
 
@@ -212,3 +220,29 @@ Full CDK node configuration. Suitable for a single operator running both batch s
 
 ### Validium mode
 Set `IsValidiumMode = true` and configure `[Aggregator.Synchronizer.Etherman.Validium]` for DAC interaction.
+
+---
+
+## Block Number Reference
+
+Two critical block numbers must be set correctly for the CDK node to sync events from L1. They come from different stages of contract deployment:
+
+| Field | Section | Source | Description |
+|-------|---------|--------|-------------|
+| `InitialBlock` | `[L1InfoTreeSync]` | `deploymentRollupManagerBlockNumber` | Block where GER + RollupManager contracts were deployed. L1 Info Tree sync starts here. |
+| `GenesisBlockNumber` | `[Aggregator.Synchronizer.Synchronizer]` | `createRollupBlockNumber` | Block where `createRollup` was called. Aggregator starts syncing batch events here. |
+
+**Timeline:**
+
+```
+L1 block:  ... 88224 ............. 88229 ............
+                │                   │
+                │                   └─ createRollup() mined
+                │                      → GenesisBlockNumber = 88229
+                │
+                └─ RollupManager + GER deployed
+                   → InitialBlock = 88224
+                   → (GER events start emitting here)
+```
+
+`InitialBlock` is typically **earlier** than `GenesisBlockNumber` because the GER contract is deployed alongside RollupManager, before `createRollup` creates the actual rollup instance.

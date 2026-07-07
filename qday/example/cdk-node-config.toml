@@ -21,11 +21,11 @@ Outputs = ["stderr"]
 
 # ---- L1 Config (fill in after deploying zkEVM contracts) ---------------------
 [L1Config]
-chainId = 1337                               # L1 chain ID (e.g., 1=mainnet, 11155111=sepolia)
-polygonZkEVMGlobalExitRootAddress = "0x0000000000000000000000000000000000000000"
-polygonRollupManagerAddress = "0x0000000000000000000000000000000000000000"
-polTokenAddress = "0x0000000000000000000000000000000000000000"
-polygonZkEVMAddress = "0x0000000000000000000000000000000000000000"
+chainId = 31337                             # L1 chain ID
+polygonZkEVMGlobalExitRootAddress = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
+polygonRollupManagerAddress = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1"
+polTokenAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+polygonZkEVMAddress = "0x24B3c7704709ed1491473F30393FFc93cFB0FC34"
 
 # ---- Sequence Sender ---------------------------------------------------------
 [SequenceSender]
@@ -41,7 +41,7 @@ WaitPeriodPurgeTxFile = "15m"
 MaxPendingTx = 1
 MaxBatchesForL1 = 300
 BlockFinality = "FinalizedBlock"
-RPCURL = "http://127.0.0.1:8123"          # L2 RPC (cdk-erigon)
+RPCURL = "http://host.docker.internal:8545"          # L2 RPC (cdk-erigon)
 GetBatchWaitInterval = "10s"
 
 [SequenceSender.EthTxManager]
@@ -61,9 +61,9 @@ SafeStatusL1NumberOfBlocks = 5
 FinalizedStatusL1NumberOfBlocks = 10
 
 [SequenceSender.EthTxManager.Etherman]
-URL = "http://l1:8545"                     # L1 RPC
+URL = "http://host.docker.internal:1545"                     # L1 RPC
 MultiGasProvider = false
-L1ChainID = 1337
+L1ChainID = 31337
 HTTPHeaders = []
 
 # ---- Aggregator --------------------------------------------------------------
@@ -74,14 +74,14 @@ RetryTime = "5s"
 VerifyProofInterval = "10s"
 ProofStatePollingInterval = "5s"
 BatchProofSanityCheckEnabled = true
-ChainID = 0
+ChainID = 44005
 ForkId = 12
 SenderAddress = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
 CleanupLockedProofsInterval = "2m"
 GeneratingProofCleanupThreshold = "10m"
 GasOffset = 0
-RPCURL = "http://127.0.0.1:8123"           # L2 RPC (fetch batch/witness)
-WitnessURL = "http://127.0.0.1:8123"
+RPCURL = "http://host.docker.internal:8545"           # L2 RPC (fetch batch/witness)
+WitnessURL = "http://host.docker.internal:8545"
 UseFullWitness = false
 DBPath = "/app/data/aggregator.sqlite"
 SettlementBackend = "l1"                   # "l1" | "agglayer"
@@ -112,9 +112,9 @@ SafeStatusL1NumberOfBlocks = 0
 FinalizedStatusL1NumberOfBlocks = 0
 
 [Aggregator.EthTxManager.Etherman]
-URL = "http://l1:8545"                     # L1 RPC
+URL = "http://host.docker.internal:1545"                     # L1 RPC
 MultiGasProvider = false
-L1ChainID = 1337
+L1ChainID = 31337
 HTTPHeaders = []
 
 [Aggregator.Synchronizer]
@@ -125,21 +125,21 @@ DataSource = "file:/app/data/aggregator_sync_db.sqlite"
 [Aggregator.Synchronizer.Synchronizer]
 SyncInterval = "10s"
 SyncChunkSize = 1000
-GenesisBlockNumber = 0
+GenesisBlockNumber = 88229
 SyncUpToBlock = "finalized"
 BlockFinality = "finalized"
 OverrideStorageCheck = false
 
 [Aggregator.Synchronizer.Etherman]
-L1URL = "http://l1:8545"
+L1URL = "http://host.docker.internal:1545"
 ForkIDChunkSize = 100
-L1ChainID = 1337
+L1ChainID = 31337
 ParallelBlockRequest = false
 
 [Aggregator.Synchronizer.Etherman.Contracts]
-GlobalExitRootManagerAddr = "0x0000000000000000000000000000000000000000"
-RollupManagerAddr = "0x0000000000000000000000000000000000000000"
-ZkEVMAddr = "0x0000000000000000000000000000000000000000"
+GlobalExitRootManagerAddr = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
+RollupManagerAddr = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1"
+ZkEVMAddr = "0x24B3c7704709ed1491473F30393FFc93cFB0FC34"
 
 [Aggregator.Synchronizer.Etherman.Validium]
 Enabled = false
@@ -166,12 +166,12 @@ CheckReorgsInterval = "5s"
 # ---- L1 Info Tree Sync -------------------------------------------------------
 [L1InfoTreeSync]
 DBPath = "/app/data/l1infotreesync.sqlite"
-GlobalExitRootAddr = "0x0000000000000000000000000000000000000000"
-RollupManagerAddr = "0x0000000000000000000000000000000000000000"
-URLRPCL1 = "http://l1:8545"
+GlobalExitRootAddr = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
+RollupManagerAddr = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1"
+URLRPCL1 = "http://host.docker.internal:1545"
 SyncBlockChunkSize = 100
 BlockFinality = "FinalizedBlock"
 WaitForNewBlocksPeriod = "5s"
-InitialBlock = 0
+InitialBlock = 88224
 RetryAfterErrorPeriod = "10s"
 MaxRetryAttemptsAfterError = 0
