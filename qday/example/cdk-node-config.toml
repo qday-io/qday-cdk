@@ -27,6 +27,11 @@ polygonRollupManagerAddress = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1"
 polTokenAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
 polygonZkEVMAddress = "0x24B3c7704709ed1491473F30393FFc93cFB0FC34"
 
+# ---- Etherman (L1 client used by runL1ClientIfNeeded) ------------------------
+[Etherman]
+URL = "http://host.docker.internal:1545"    # L1 RPC
+ForkIDChunkSize = 100
+
 # ---- Sequence Sender ---------------------------------------------------------
 [SequenceSender]
 WaitPeriodSendSequence = "15s"

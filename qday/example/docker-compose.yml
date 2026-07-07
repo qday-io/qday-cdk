@@ -56,6 +56,8 @@ services:
       - "sequence-sender"
     environment:
       - CDK_LOG_LEVEL=${CDK_LOG_LEVEL:-info}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./cdk-node-config.toml:/app/config/cdk-node-config.toml:ro
       - ./keystores:/app/keystores:ro
@@ -84,6 +86,8 @@ services:
       - "aggregator"
     environment:
       - CDK_LOG_LEVEL=${CDK_LOG_LEVEL:-info}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./cdk-node-config.toml:/app/config/cdk-node-config.toml:ro
       - ./keystores:/app/keystores:ro

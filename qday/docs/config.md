@@ -52,6 +52,16 @@ Only set `[L1Config]` in your config file; `[NetworkConfig.L1]` is populated aut
 | `RollupManagerAddr` | address | `0x0` | Rollup Manager contract address (auto from `L1Config.polygonRollupManagerAddress`). |
 | `GlobalExitRootManagerAddr` | address | `0x0` | Global Exit Root Manager contract address (auto from `L1Config.polygonZkEVMGlobalExitRootAddress`). |
 
+## [Etherman]
+
+> **Important**: This section provides the L1 RPC URL used by `runL1ClientIfNeeded()` in `cmd/run.go` to create the shared L1 client. If this is missing, the default `http://localhost:8545` will be used, causing connection errors. **Always set this to your actual L1 RPC URL.**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `URL` | string | `"http://localhost:8545"` | **Required**. L1 RPC URL for the shared L1 client. |
+| `ForkIDChunkSize` | uint64 | `100` | Max interval for forkID detection calls to L1. |
+| `[Etherman.EthermanConfig]` | - | - | Nested etherman config (same as `EthTxManager.Etherman`). |
+
 ## [SequenceSender]
 
 Controls how L2 batches are sent to L1.
