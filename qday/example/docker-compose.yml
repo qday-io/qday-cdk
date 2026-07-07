@@ -36,6 +36,9 @@ services:
   #  container name, here "cdk-aggregator").
   zkevm-prover:
     image: ${ZKEVM_PROVER_IMAGE}
+    build:
+      context: ${ZKEVM_PROVER_SRC:-../../qday-zkevm-prover}
+      dockerfile: Dockerfile
     container_name: cdk-zkevm-prover
     entrypoint: ["/usr/src/app/entrypoint.sh"]
     volumes:
