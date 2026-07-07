@@ -37,12 +37,16 @@ services:
   zkevm-prover:
     image: ${ZKEVM_PROVER_IMAGE}
     container_name: cdk-zkevm-prover
+    entrypoint: ["/usr/src/app/entrypoint.sh"]
     volumes:
       - ./prover.config.json:/usr/src/app/config.json:ro
-      - ./prover-config:/usr/src/app/config
+      - ./prover-entrypoint.sh:/usr/src/app/entrypoint.sh:ro
       - ./data/prover:/app/output
-    command: >
-      zkProver -c /usr/src/app/config.json
+    command:
+      - "zkProver"
+      - "-c"
+      - "/usr/src/app/config.json"
+    working_dir: /usr/src/app
     networks:
       - cdk-net
     restart: unless-stopped
