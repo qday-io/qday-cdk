@@ -1,6 +1,5 @@
 .env
 data/
-prover-config/
 # Ignore user-provided keystores, but ship the bundled test keystores
 # (public Hardhat keys, password "testonly") so the example runs out of the box.
 keystores/*
