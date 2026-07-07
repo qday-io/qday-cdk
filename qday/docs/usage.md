@@ -46,7 +46,8 @@ CDK_NODE_IMAGE=cdk
    ```
 
 2. Edit `qday/example/cdk-node-config.toml`:
-   - Set L1 contract addresses under `[L1Config]` and `[NetworkConfig.L1]`
+   - Set L1 contract addresses under `[L1Config]`
+   - Set `[Etherman].URL` to your L1 RPC
    - Set `SequenceSender.EthTxManager.Etherman.URL` to your L1 RPC
    - Set `Aggregator.EthTxManager.Etherman.URL` to your L1 RPC
    - Set `Aggregator.Synchronizer.Etherman.L1URL` to your L1 RPC
@@ -54,7 +55,7 @@ CDK_NODE_IMAGE=cdk
    - Set `Aggregator.WitnessURL` to your witness server URL
 
 3. Keystore files are bundled in `qday/example/keystores/` (Hardhat test keys,
-   password `testonly`). Replace them with your own keystores for production:
+   password `testonly"). Replace them with your own keystores for production:
 
    - `sequencer.keystore` — For sequence sender L1 transactions
    - `aggregator.keystore` — For aggregator L1 proof settlement
@@ -62,6 +63,17 @@ CDK_NODE_IMAGE=cdk
    If you replace them, also update `SequenceSender.PrivateKey`,
    `Aggregator.EthTxManager.PrivateKeys`, and `Aggregator.SenderAddress` in
    `cdk-node-config.toml` to match the new keystore addresses and password.
+
+4. (Production only) Download ZK proving files:
+   The prover runs in **mock mode** by default (`runAggregatorClientMock: true`
+   in `prover.config.json`), which does not require proving files.
+   For production, set `runAggregatorClientMock` to `false` and download:
+   ```bash
+   cd qday/example
+   chmod +x download-prover-files.sh
+   ./download-prover-files.sh
+   ```
+   This creates `qday/example/prover-config/` (~115GB).
 
 ## Start Services
 

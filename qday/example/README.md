@@ -25,6 +25,11 @@ docker compose -f qday/example/docker-compose.yml up -d
 docker compose -f qday/example/docker-compose.yml logs -f
 ```
 
+The prover runs in **mock mode** (`runAggregatorClientMock: true`) for testnet
+use — no proving files needed. For production, set `runAggregatorClientMock` to
+`false` in `prover.config.json` and download proving files via
+`./download-prover-files.sh`.
+
 The published CDK node image (`ghcr.io/0xpolygon/cdk`) is pulled automatically.
 To run a locally built image instead, build it with `make build-docker`
 (tags the image as `cdk`) and set `CDK_NODE_IMAGE=cdk` in `.env`.
@@ -36,10 +41,11 @@ To run a locally built image instead, build it with `make build-docker`
 | `docker-compose.yml` | Docker Compose orchestration for prover, sequence-sender and aggregator |
 | `cdk-node-config.toml` | CDK node configuration file |
 | `prover.config.json` | Stateless ZK prover configuration (connects to the aggregator gRPC server) |
+| `download-prover-files.sh` | Script to download ZK proving files (~75GB) |
 | `keystores/sequencer.keystore` | Sequencer keystore (Hardhat test key, password `testonly`) |
 | `keystores/aggregator.keystore` | Aggregator keystore (Hardhat test key, password `testonly`) |
 | `env-example` | Environment variable template (copy to `.env`) |
-| `.gitignore` | Ignores `.env`, `data/`, user-added keystores |
+| `.gitignore` | Ignores `.env`, `data/`, `prover-config/`, user-added keystores |
 
 ## Services
 
