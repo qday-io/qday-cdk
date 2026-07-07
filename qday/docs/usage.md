@@ -64,16 +64,17 @@ CDK_NODE_IMAGE=cdk
    `Aggregator.EthTxManager.PrivateKeys`, and `Aggregator.SenderAddress` in
    `cdk-node-config.toml` to match the new keystore addresses and password.
 
-4. (Production only) Download ZK proving files:
-   The prover runs in **mock mode** by default (`runAggregatorClientMock: true`
-   in `prover.config.json`), which does not require proving files.
-   For production, set `runAggregatorClientMock` to `false` and download:
+4. Create dummy prover config files for mock mode:
+   The prover checks for proving file existence at startup even in mock mode.
+   Create dummy files to pass the checks:
    ```bash
    cd qday/example
-   chmod +x download-prover-files.sh
-   ./download-prover-files.sh
+   chmod +x setup-prover-mock.sh
+   ./setup-prover-mock.sh
    ```
-   This creates `qday/example/prover-config/` (~115GB).
+   This creates `qday/example/prover-config/` with empty dummy files (~KB).
+   For production, set `runAggregatorClientMock` to `false` in `prover.config.json`
+   and download real proving files via `./download-prover-files.sh` (~115GB).
 
 ## Start Services
 

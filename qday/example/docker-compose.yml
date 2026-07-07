@@ -11,9 +11,10 @@
 #        - Data Streamer port (default 6900)
 #   4. ZK prover (zkevm-prover) is started as a compose service below.
 #      It connects to the aggregator's gRPC port (50081) as a client.
-#      Testnet/mock mode: the prover runs in mock mode (no proving files needed).
+#      Testnet/mock mode: run ./setup-prover-mock.sh to create dummy config
+#      files, then the prover runs in mock mode (no real proving needed).
 #      For production: set runAggregatorClientMock=false in prover.config.json
-#      and download proving files via ./download-prover-files.sh
+#      and download real proving files via ./download-prover-files.sh
 #
 # Usage:
 #   cp env-example .env
@@ -38,6 +39,7 @@ services:
     container_name: cdk-zkevm-prover
     volumes:
       - ./prover.config.json:/usr/src/app/config.json:ro
+      - ./prover-config:/usr/src/app/config:ro
       - ./data/prover:/app/output
     command: >
       zkProver -c /usr/src/app/config.json
