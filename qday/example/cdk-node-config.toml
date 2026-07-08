@@ -133,7 +133,7 @@ SyncChunkSize = 1000
 GenesisBlockNumber = 88229
 SyncUpToBlock = "finalized"
 BlockFinality = "finalized"
-OverrideStorageCheck = false
+OverrideStorageCheck = true
 
 [Aggregator.Synchronizer.Etherman]
 L1URL = "http://host.docker.internal:1545"
