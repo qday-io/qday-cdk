@@ -127,6 +127,8 @@ Healthy indicators in logs:
 - `"sending sequence"` or similar — Actively submitting batches
 
 Common issues:
+- `"error no leaves on L1InfoTree yet and GetInitL1InfoRootMap fails"` — `InitialBlock` is set too high and missed the `InitL1InfoRootMap` event. See [config.md](config.md#initialblock-vs-genesisblocknumber). Fix: find the actual event block, update `InitialBlock`, and delete the L1InfoTreeSync DB to resync.
+- `"execution reverted: ERC20: insufficient allowance"` — Sequencer hasn't approved the rollup contract to spend POL. See [config.md](config.md#pol-allowance). Fix: `cast send <POL> "approve(address,uint256)" <ROLLUP> <AMOUNT>`.
 - `"Failed to create etherman"` — Check L1 RPC URL and contract addresses
 - `"Required field RPCURL is empty"` — L2 RPC not configured
 - Connection refused — L1/L2 nodes not running or network unreachable

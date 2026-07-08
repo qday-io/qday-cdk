@@ -211,9 +211,48 @@ Syncs the L1 Info Tree (Global Exit Roots, L1 Info Tree leaves).
 | `SyncBlockChunkSize` | uint64 | `100` | Blocks to process per sync cycle. |
 | `BlockFinality` | string | `"FinalizedBlock"` | Block finality level for synced data. |
 | `WaitForNewBlocksPeriod` | duration | `"5s"` | Wait interval when no new blocks are found. |
-| `InitialBlock` | uint64 | `0` | **Required**. The block number on L1 where the GlobalExitRoot contract was deployed. The L1 Info Tree syncer starts listening for GER and RollupManager events from this block. Use the `deploymentRollupManagerBlockNumber` from the contract deployment output. This is typically **earlier** than `GenesisBlockNumber` because GER is deployed with RollupManager before `createRollup` is called. |
+| `InitialBlock` | uint64 | `0` | **Required**. The block number on L1 where the GlobalExitRoot contract was deployed. The L1 Info Tree syncer starts listening for GER and RollupManager events from this block. Use the **earliest** relevant L1 block — typically the block where the GER contract emits its first `InitL1InfoRootMap` event (which may be **earlier** than the RollupManager deployment block). If set too late, the syncer will miss this initial event, causing the sequence-sender to fail with `"no leaves on L1InfoTree yet"` even after the sync catches up. See [InitialBlock vs GenesisBlockNumber](#initialblock-vs-genesisblocknumber) below for the correct value to use. |
 | `RetryAfterErrorPeriod` | duration | `"10s"` | Wait time before retrying after an error. |
 | `MaxRetryAttemptsAfterError` | int | `0` | Max retry attempts (0 = unlimited). |
+
+---
+
+## POL Allowance
+
+The sequence-sender submits L2 batches to the L1 rollup contract by calling `sequenceBatches()` on the RollupManager. This function requires the sequencer to have sufficient POL token allowance granted to the **rollup contract** (not just the RollupManager).
+
+### The Problem
+
+When allowance is missing or granted to the wrong contract, the sequence-sender fails with:
+
+```
+error estimating gas: execution reverted: ERC20: insufficient allowance
+```
+
+### Steps to Fix
+
+1. **Identify the sequencer address** — from config `SequenceSender.L2Coinbase`
+2. **Identify the POL token address** — from `L1Config.polTokenAddress` (in contract deployment output)
+3. **Identify the rollup contract address** — from `L1Config.polygonZkEVMAddress` (from `create_rollup_output.json`, `rollupAddress` field)
+4. **Grant allowance** — authorize the rollup contract to spend POL from the sequencer:
+
+```bash
+cast send <POL_TOKEN> "approve(address,uint256)" \
+  <ROLLUP_CONTRACT> 115792089237316195423570985008687907853269984665640564039457584007913129639935 \
+  --private-key <SEQUENCER_PRIVATE_KEY> \
+  --rpc-url <L1_RPC>
+```
+
+> **Important**: Allowance must be to the **rollup contract** (`polygonZkEVMAddress` / `rollupAddress`), not the RollupManager. The `sequenceBatches()` call transfers POL from sequencer to rollup, so the rollup needs the allowance.
+
+### Verify
+
+```bash
+# Check POL balance
+cast call <POL_TOKEN> "balanceOf(address)(uint256)" <SEQUENCER> --rpc-url <L1_RPC>
+# Check allowance
+cast call <POL_TOKEN> "allowance(address,address)(uint256)" <SEQUENCER> <ROLLUP> --rpc-url <L1_RPC>
+```
 
 ---
 
@@ -277,20 +316,41 @@ Two critical block numbers must be set correctly for the CDK node to sync events
 
 | Field | Section | Source | Description |
 |-------|---------|--------|-------------|
-| `InitialBlock` | `[L1InfoTreeSync]` | `deploymentRollupManagerBlockNumber` | Block where GER + RollupManager contracts were deployed. L1 Info Tree sync starts here. |
+| `InitialBlock` | `[L1InfoTreeSync]` | **Earliest GER event block** | Block where the GER contract emits its first `InitL1InfoRootMap` event. This is typically the GER contract deployment block, which is **earlier** than `createRollup`. Must be low enough to capture this event, or sequence-sender will fail. |
 | `GenesisBlockNumber` | `[Aggregator.Synchronizer.Synchronizer]` | `createRollupBlockNumber` | Block where `createRollup` was called. Aggregator starts syncing batch events here. |
 
 **Timeline:**
 
 ```
-L1 block:  ... 88224 ............. 88229 ............
-                │                   │
-                │                   └─ createRollup() mined
-                │                      → GenesisBlockNumber = 88229
+L1 block:  ... 88220 ......... 88224 .......... 88229 ............
+                │               │               │
+                │               │               └─ createRollup() mined
+                │               │                  → GenesisBlockNumber = 88229
+                │               │
+                │               └─ RollupManager deployed
+                │                  (deploymentRollupManagerBlockNumber = 88224)
                 │
-                └─ RollupManager + GER deployed
-                   → InitialBlock = 88224
-                   → (GER events start emitting here)
+                └─ GER InitL1InfoRootMap emitted
+                   → InitialBlock MUST be ≤ 88220 to capture this
+                   → If InitialBlock = 88224, this event is MISSED
+                      and sequence-sender fails with:
+                      "error no leaves on L1InfoTree yet and GetInitL1InfoRootMap fails"
 ```
 
-`InitialBlock` is typically **earlier** than `GenesisBlockNumber` because the GER contract is deployed alongside RollupManager, before `createRollup` creates the actual rollup instance.
+**Key lesson**: `InitialBlock` should be set to a block **before** the first GER event, not the RollupManager deployment block. The `InitL1InfoRootMap` event may be emitted by the GER contract independently of the RollupManager deployment. Always check the actual L1 event logs to find the earliest relevant event block:
+
+```bash
+curl -s -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"0x0","toBlock":"latest","address":"<GER_ADDRESS>","topics":["0x11f50c71891002839c2637ce302087160298255a87f1ea60d40e8db081383fad"]}],"id":1}' \
+  <L1_RPC_URL>
+```
+
+### InitialBlock vs GenesisBlockNumber
+
+`InitialBlock` is typically **earlier** than `GenesisBlockNumber` because the GER contract emits `InitL1InfoRootMap` during its own initialization, before `createRollup` creates the actual rollup instance. Setting `InitialBlock` to `deploymentRollupManagerBlockNumber` (88224 in the example) may be too late if the GER event occurred earlier (88220).
+
+If sequence-sender continuously logs `"error no leaves on L1InfoTree yet and GetInitL1InfoRootMap fails"` even though the L1InfoTree sync has completed (Progress 100%), the `InitialBlock` is likely set too high. Fix by:
+
+1. Query L1 logs to find the actual `InitL1InfoRootMap` event block
+2. Set `InitialBlock` to that block or a few blocks before it
+3. Delete the L1InfoTreeSync database to force a resync:
