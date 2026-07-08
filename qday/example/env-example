@@ -13,3 +13,6 @@ CDK_NODE_IMAGE=ghcr.io/0xpolygon/cdk:0.5.4-rc1
 
 # Log level override (debug, info, warn, error)
 CDK_LOG_LEVEL=info
+
+# Docker image for the ZK prover (includes all proving files)
+ZKEVM_PROVER_IMAGE=ghcr.io/qday-io/qday-zkevm-prover:v8.0.0-RC16-fork.12

@@ -1,5 +1,5 @@
 # =============================================================================
-# CDK Example - sequence-sender + aggregator (separate services)
+# CDK Example - sequence-sender + aggregator (+ prover)
 # =============================================================================
 # Prerequisites:
 #   1. L1 chain with zkEVM contracts deployed (RollupManager, Bridge, GER, etc)
@@ -9,16 +9,12 @@
 #   3. L2 node (cdk-erigon) must be running externally, providing:
 #        - RPC port (default 8123)
 #        - Data Streamer port (default 6900)
-#   4. (Optional) ZK prover - disabled by default for testnet.
-#      The aggregator runs fine without it as a gRPC server.
-#      To enable, uncomment the zkevm-prover service below.
-#      Requires downloaded proving files (~75GB) or local prover source build.
-#      See docs/usage.md for details.
+#   4. ZK prover connects to the aggregator's gRPC port (50081) as a client.
+#      Uses a pre-built image with all proving files included.
 #
 # Usage:
 #   cp env-example .env
 #   docker compose -f qday/example/docker-compose.yml up -d
-#   # (image is pulled from ghcr.io by default; see env-example to override)
 #
 # View logs:
 #   docker compose -f qday/example/docker-compose.yml logs -f
@@ -29,6 +25,22 @@ networks:
     driver: bridge
 
 services:
+  # ---- ZK Prover -------------------------------------------------------------
+  # Stateless ZK prover. Acts as a gRPC client and connects to the aggregator.
+  zkevm-prover:
+    image: ${ZKEVM_PROVER_IMAGE}
+    container_name: cdk-zkevm-prover
+    volumes:
+      - ./prover.config.json:/usr/src/app/config.json:ro
+      - ./data/prover:/usr/src/app/output
+    command:
+      - "zkProver"
+      - "-c"
+      - "/usr/src/app/config.json"
+    networks:
+      - cdk-net
+    restart: unless-stopped
+
   # ---- Sequence Sender -------------------------------------------------------
   # Sends L2 batches to L1 rollup contract
   sequence-sender:
@@ -89,4 +101,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+    depends_on:
+      zkevm-prover:
+        condition: service_started
     restart: unless-stopped
