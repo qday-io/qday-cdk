@@ -9,12 +9,11 @@
 #   3. L2 node (cdk-erigon) must be running externally, providing:
 #        - RPC port (default 8123)
 #        - Data Streamer port (default 6900)
-#   4. ZK prover (zkevm-prover) is started as a compose service below.
-#      It connects to the aggregator's gRPC port (50081) as a client.
-#      Testnet/mock mode: run ./setup-prover-mock.sh to create dummy config
-#      files, then the prover runs in mock mode (no real proving needed).
-#      For production: set runAggregatorClientMock=false in prover.config.json
-#      and download real proving files via ./download-prover-files.sh
+#   4. (Optional) ZK prover - disabled by default for testnet.
+#      The aggregator runs fine without it as a gRPC server.
+#      To enable, uncomment the zkevm-prover service below.
+#      Requires downloaded proving files (~75GB) or local prover source build.
+#      See docs/usage.md for details.
 #
 # Usage:
 #   cp env-example .env
@@ -30,42 +29,6 @@ networks:
     driver: bridge
 
 services:
-  # ---- ZK Prover -------------------------------------------------------------
-  # Stateless ZK prover. Acts as a gRPC client and connects to the aggregator
-  # (aggregatorClientHost in prover.config.json must match the aggregator
-  #  container name, here "cdk-aggregator").
-  zkevm-prover:
-    image: ${ZKEVM_PROVER_IMAGE}
-    container_name: cdk-zkevm-prover
-    entrypoint: ["/usr/src/app/entrypoint.sh"]
-    volumes:
-      - ./prover.config.json:/usr/src/app/config.json:ro
-      - ./prover-entrypoint.sh:/usr/src/app/entrypoint.sh:ro
-      - ./scripts/storage_sm_rom.json:/usr/src/app/config/scripts/storage_sm_rom.json:ro
-      - ./scripts/keccak_script.json:/usr/src/app/config/scripts/keccak_script.json:ro
-      - ./scripts/sha256_script.json:/usr/src/app/config/scripts/sha256_script.json:ro
-      - ./rom/fork_1/scripts/rom.json:/usr/src/app/src/main_sm/fork_1/scripts/rom.json:ro
-      - ./rom/fork_2/scripts/rom.json:/usr/src/app/src/main_sm/fork_2/scripts/rom.json:ro
-      - ./rom/fork_3/scripts/rom.json:/usr/src/app/src/main_sm/fork_3/scripts/rom.json:ro
-      - ./rom/fork_4/scripts/rom.json:/usr/src/app/src/main_sm/fork_4/scripts/rom.json:ro
-      - ./rom/fork_5/scripts/rom.json:/usr/src/app/src/main_sm/fork_5/scripts/rom.json:ro
-      - ./rom/fork_6/scripts/rom.json:/usr/src/app/src/main_sm/fork_6/scripts/rom.json:ro
-      - ./rom/fork_7/scripts/rom.json:/usr/src/app/src/main_sm/fork_7/scripts/rom.json:ro
-      - ./rom/fork_8/scripts/rom.json:/usr/src/app/src/main_sm/fork_8/scripts/rom.json:ro
-      - ./rom/fork_9/scripts/rom.json:/usr/src/app/src/main_sm/fork_9/scripts/rom.json:ro
-      - ./rom/fork_10/scripts/rom_10.json:/usr/src/app/src/main_sm/fork_10/scripts/rom_10.json:ro
-      - ./rom/fork_10/scripts/rom_11.json:/usr/src/app/src/main_sm/fork_10/scripts/rom_11.json:ro
-      - ./rom/fork_12/scripts/rom_12.json:/usr/src/app/src/main_sm/fork_12/scripts/rom_12.json:ro
-      - ./data/prover:/app/output
-    command:
-      - "zkProver"
-      - "-c"
-      - "/usr/src/app/config.json"
-    working_dir: /usr/src/app
-    networks:
-      - cdk-net
-    restart: unless-stopped
-
   # ---- Sequence Sender -------------------------------------------------------
   # Sends L2 batches to L1 rollup contract
   sequence-sender:
@@ -126,7 +89,4 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
-    depends_on:
-      zkevm-prover:
-        condition: service_started
     restart: unless-stopped
