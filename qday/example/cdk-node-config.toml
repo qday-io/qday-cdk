@@ -131,9 +131,9 @@ DataSource = "file:/app/data/aggregator_sync_db.sqlite"
 SyncInterval = "10s"
 SyncChunkSize = 1000
 GenesisBlockNumber = 88229
-SyncUpToBlock = "latest"
-BlockFinality = "latest"
-OverrideStorageCheck = true
+SyncUpToBlock = "finalized"
+BlockFinality = "finalized"
+OverrideStorageCheck = false
 
 [Aggregator.Synchronizer.Etherman]
 L1URL = "http://host.docker.internal:1545"
