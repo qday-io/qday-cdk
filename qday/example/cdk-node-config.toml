@@ -131,8 +131,8 @@ DataSource = "file:/app/data/aggregator_sync_db.sqlite"
 SyncInterval = "10s"
 SyncChunkSize = 1000
 GenesisBlockNumber = 88229
-SyncUpToBlock = "finalized"
-BlockFinality = "finalized"
+SyncUpToBlock = "latest"
+BlockFinality = "latest"
 OverrideStorageCheck = true
 
 [Aggregator.Synchronizer.Etherman]
