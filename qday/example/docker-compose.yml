@@ -41,6 +41,9 @@ services:
     volumes:
       - ./prover.config.json:/usr/src/app/config.json:ro
       - ./prover-entrypoint.sh:/usr/src/app/entrypoint.sh:ro
+      - ./scripts/storage_sm_rom.json:/usr/src/app/config/scripts/storage_sm_rom.json:ro
+      - ./scripts/keccak_script.json:/usr/src/app/config/scripts/keccak_script.json:ro
+      - ./scripts/sha256_script.json:/usr/src/app/config/scripts/sha256_script.json:ro
       - ./rom/fork_1/scripts/rom.json:/usr/src/app/src/main_sm/fork_1/scripts/rom.json:ro
       - ./rom/fork_2/scripts/rom.json:/usr/src/app/src/main_sm/fork_2/scripts/rom.json:ro
       - ./rom/fork_3/scripts/rom.json:/usr/src/app/src/main_sm/fork_3/scripts/rom.json:ro

@@ -57,9 +57,8 @@ touch "${CONFIG_DIR}/recursivef/recursivef.exec"
 touch "${CONFIG_DIR}/final/final.verifier.dat"
 touch "${CONFIG_DIR}/final/final.fflonk.zkey"
 echo '{}' > "${CONFIG_DIR}/final/final.fflonk.verkey.json"
-# scripts
-echo '{}' > "${CONFIG_DIR}/scripts/keccak_script.json"
-echo '{}' > "${CONFIG_DIR}/scripts/storage_sm_rom.json"
+# scripts (real files are mounted via docker-compose volumes)
+# keccak_script.json, sha256_script.json, storage_sm_rom.json are mounted
 
 echo "Dummy prover config files created in ${CONFIG_DIR}"
 
