@@ -233,6 +233,44 @@ Set `IsValidiumMode = true` and configure `[Aggregator.Synchronizer.Etherman.Val
 
 ---
 
+## Sync Finality Configuration
+
+Three fields in `[Aggregator.Synchronizer.Synchronizer]` control how the L1 synchronizer tracks chain progress. They are related but serve different purposes:
+
+### Relationship
+
+```
+SyncUpToBlock = "finalized"    →  How far to sync (which L1 block is the target)
+BlockFinality = "finalized"    →  What "safe" means when reading contract state mid-sync
+OverrideStorageCheck = false   →  Whether to re-verify stored data against L1
+```
+
+When the syncer processes a batch of L1 blocks, it:
+1. Determines the target block range using `SyncUpToBlock` (e.g., stop when the target block is finalized)
+2. For each block in the range, queries the RollupManager contract using `BlockFinality` as the block tag
+3. Compares the result against the stored DB state — `OverrideStorageCheck` decides if mismatch means an error or is skipped
+
+### Common Scenarios
+
+| Scenario | `SyncUpToBlock` | `BlockFinality` | `OverrideStorageCheck` | Why |
+|----------|-----------------|-----------------|------------------------|-----|
+| **Testnet / Dev** | `"latest"` | `"latest"` | `true` | Dev L1 may not support `finalized` tag; skip checks for speed |
+| **Production** | `"finalized"` | `"finalized"` | `false` | Reorg-safety is critical; re-verify to catch data corruption |
+| **Sync stall** (stuck at same block) | Switch to `"latest"` | `"latest"` | `true` | Helps bypass L1 RPC quirks temporarily. Revert after sync catches up |
+| **Cross-version upgrade** (newer CDK on old DB) | Keep default | Keep default | `true` | Old DB format may fail new checks; skip them during transition |
+| **Resync from clean state** | Keep default | Keep default | `false` | Clean DB has nothing to check against; safe to verify |
+
+### Sync Stall Diagnosis
+
+If the syncer logs show the same `FromBlock` repeatedly (e.g., `FromBlock: 99240` never changes) despite `ToBlock` advancing:
+
+1. **Check L1 block finality**: `curl -X POST -d '{"method":"eth_getBlockByNumber","params":["finalized",false]}' <L1_RPC>`. If the returned block is stale, `SyncUpToBlock = "finalized"` will stall
+2. **Check event existence**: Query `eth_getLogs` for the stalled block range to confirm events exist
+3. **Short-term fix**: Set `SyncUpToBlock = "latest"` + `OverrideStorageCheck = true` to push through
+4. **Long-term fix**: If on a dev/test L1, use `"latest"` permanently. For production, investigate why the L1 node isn't producing finalized blocks
+
+---
+
 ## Block Number Reference
 
 Two critical block numbers must be set correctly for the CDK node to sync events from L1. They come from different stages of contract deployment:
