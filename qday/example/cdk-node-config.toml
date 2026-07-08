@@ -177,6 +177,6 @@ URLRPCL1 = "http://host.docker.internal:1545"
 SyncBlockChunkSize = 100
 BlockFinality = "FinalizedBlock"
 WaitForNewBlocksPeriod = "5s"
-InitialBlock = 88224
+InitialBlock = 88215
 RetryAfterErrorPeriod = "10s"
 MaxRetryAttemptsAfterError = 0
