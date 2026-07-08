@@ -41,6 +41,18 @@ services:
     volumes:
       - ./prover.config.json:/usr/src/app/config.json:ro
       - ./prover-entrypoint.sh:/usr/src/app/entrypoint.sh:ro
+      - ./rom/fork_1/scripts/rom.json:/usr/src/app/src/main_sm/fork_1/scripts/rom.json:ro
+      - ./rom/fork_2/scripts/rom.json:/usr/src/app/src/main_sm/fork_2/scripts/rom.json:ro
+      - ./rom/fork_3/scripts/rom.json:/usr/src/app/src/main_sm/fork_3/scripts/rom.json:ro
+      - ./rom/fork_4/scripts/rom.json:/usr/src/app/src/main_sm/fork_4/scripts/rom.json:ro
+      - ./rom/fork_5/scripts/rom.json:/usr/src/app/src/main_sm/fork_5/scripts/rom.json:ro
+      - ./rom/fork_6/scripts/rom.json:/usr/src/app/src/main_sm/fork_6/scripts/rom.json:ro
+      - ./rom/fork_7/scripts/rom.json:/usr/src/app/src/main_sm/fork_7/scripts/rom.json:ro
+      - ./rom/fork_8/scripts/rom.json:/usr/src/app/src/main_sm/fork_8/scripts/rom.json:ro
+      - ./rom/fork_9/scripts/rom.json:/usr/src/app/src/main_sm/fork_9/scripts/rom.json:ro
+      - ./rom/fork_10/scripts/rom_10.json:/usr/src/app/src/main_sm/fork_10/scripts/rom_10.json:ro
+      - ./rom/fork_10/scripts/rom_11.json:/usr/src/app/src/main_sm/fork_10/scripts/rom_11.json:ro
+      - ./rom/fork_12/scripts/rom_12.json:/usr/src/app/src/main_sm/fork_12/scripts/rom_12.json:ro
       - ./data/prover:/app/output
     command:
       - "zkProver"
