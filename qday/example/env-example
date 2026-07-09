@@ -9,7 +9,7 @@
 # To run a locally built image instead, build it with `make build-docker`
 # (which tags the image as `cdk`) and set:
 #   CDK_NODE_IMAGE=cdk
-CDK_NODE_IMAGE=ghcr.io/0xpolygon/cdk:0.5.4-rc1
+CDK_NODE_IMAGE=ghcr.io/qday-io/qday-cdk:qday-v0.5.4-fork12
 
 # Log level override (debug, info, warn, error)
 CDK_LOG_LEVEL=info
