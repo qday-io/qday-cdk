@@ -1,0 +1,18 @@
+# =============================================================================
+# CDK Node - Environment Variables
+# =============================================================================
+# Copy this file to .env and update values as needed
+#   cp env-example .env
+
+# Docker image for CDK node.
+# Default: published image (pulled automatically by docker compose).
+# To run a locally built image instead, build it with `make build-docker`
+# (which tags the image as `cdk`) and set:
+#   CDK_NODE_IMAGE=cdk
+CDK_NODE_IMAGE=ghcr.io/qday-io/qday-cdk:qday-v0.5.4-fork12
+
+# Log level override (debug, info, warn, error)
+CDK_LOG_LEVEL=info
+
+# Docker image for the ZK prover (includes all proving files)
+ZKEVM_PROVER_IMAGE=ghcr.io/qday-io/qday-zkevm-prover:v8.0.0-RC16-fork.12
