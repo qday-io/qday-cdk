@@ -17,7 +17,7 @@ The example uses the published CDK node image by default, configured via
 `CDK_NODE_IMAGE` in `env-example`:
 
 ```
-CDK_NODE_IMAGE=ghcr.io/0xpolygon/cdk:0.5.4-rc1
+CDK_NODE_IMAGE=ghcr.io/qday-io/qday-cdk:qday-v0.5.4-fork12
 ```
 
 `docker compose up` pulls it automatically — no build step required.
@@ -64,17 +64,10 @@ CDK_NODE_IMAGE=cdk
    `Aggregator.EthTxManager.PrivateKeys`, and `Aggregator.SenderAddress` in
    `cdk-node-config.toml` to match the new keystore addresses and password.
 
-4. Create dummy prover config files for mock mode:
-   The prover checks for proving file existence at startup even in mock mode.
-   Create dummy files to pass the checks:
-   ```bash
-   cd qday/example
-   chmod +x setup-prover-mock.sh
-   ./setup-prover-mock.sh
-   ```
-   This creates `qday/example/prover-config/` with empty dummy files (~KB).
-   For production, set `runAggregatorClientMock` to `false` in `prover.config.json`
-   and download real proving files via `./download-prover-files.sh` (~115GB).
+4. The prover runs in **mock mode** by default (`runAggregatorClientMock: true` in `prover.config.json`).
+   The prover image includes all necessary config files. For production,
+   set `runAggregatorClientMock` to `false` in `prover.config.json` and download
+   real proving files via `./download-prover-files.sh` (~115GB).
 
 ## Start Services
 

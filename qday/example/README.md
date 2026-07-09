@@ -16,26 +16,21 @@ This example demonstrates running CDK with `sequence-sender` and `aggregator` as
 # 1. Prepare environment (uses the published CDK image by default)
 cp env-example .env
 
-# 2. Create dummy prover config files for mock mode
-chmod +x setup-prover-mock.sh
-./setup-prover-mock.sh
+# 2. Update contract addresses in cdk-node-config.toml
 
-# 3. Update contract addresses in cdk-node-config.toml
-
-# 4. Start services
+# 3. Start services
 docker compose -f qday/example/docker-compose.yml up -d
 
-# 5. Check logs
+# 4. Check logs
 docker compose -f qday/example/docker-compose.yml logs -f
 ```
 
 The prover runs in **mock mode** (`runAggregatorClientMock: true`) for testnet
-use — `setup-prover-mock.sh` creates dummy config files (~KB) to pass the
-prover's startup checks. For production, set `runAggregatorClientMock` to
-`false` in `prover.config.json` and download real proving files (~75GB) via
-`./download-prover-files.sh`.
+use. The prover image includes all necessary config files. For production,
+set `runAggregatorClientMock` to `false` in `prover.config.json` and download
+real proving files (~75GB) via `./download-prover-files.sh`.
 
-The published CDK node image (`ghcr.io/0xpolygon/cdk`) is pulled automatically.
+The published CDK node image (`ghcr.io/qday-io/qday-cdk:qday-v0.5.4-fork12`) is pulled automatically.
 To run a locally built image instead, build it with `make build-docker`
 (tags the image as `cdk`) and set `CDK_NODE_IMAGE=cdk` in `.env`.
 
@@ -47,11 +42,10 @@ To run a locally built image instead, build it with `make build-docker`
 | `cdk-node-config.toml` | CDK node configuration file |
 | `prover.config.json` | Stateless ZK prover configuration (connects to the aggregator gRPC server) |
 | `download-prover-files.sh` | Script to download real ZK proving files (~75GB, production) |
-| `setup-prover-mock.sh` | Script to create dummy config files for mock mode (testnet) |
 | `keystores/sequencer.keystore` | Sequencer keystore (Hardhat test key, password `testonly`) |
 | `keystores/aggregator.keystore` | Aggregator keystore (Hardhat test key, password `testonly`) |
 | `env-example` | Environment variable template (copy to `.env`) |
-| `.gitignore` | Ignores `.env`, `data/`, `prover-config/`, user-added keystores |
+| `.gitignore` | Ignores `.env`, `data/`, user-added keystores |
 
 ## Services
 
