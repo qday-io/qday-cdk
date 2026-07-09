@@ -3,11 +3,6 @@ name: Build and Push Image
 on:
   workflow_dispatch:
     inputs:
-      git_ref:
-        description: 'Branch or tag to build'
-        required: true
-        type: string
-        default: 'main'
       image_tag:
         description: 'Docker image tag'
         required: true
@@ -31,8 +26,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.git_ref }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
