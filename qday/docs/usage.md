@@ -185,6 +185,8 @@ Expected: SQLite database files present (e.g., `ethtxmanager.db`, `aggregator.sq
 
 ## Debugging
 
+To trace an L2 transaction from hash through Pending → Trusted → Virtual → Verified, see [l2_tx_lifecycle.md](l2_tx_lifecycle.md).
+
 ### Increase log verbosity
 
 Set `CDK_LOG_LEVEL=debug` in `.env` and restart:
