@@ -9,6 +9,7 @@ Documentation for deploying and operating CDK components.
 | [config.md](config.md) | Configuration reference - all fields, defaults, and use cases |
 | [usage.md](usage.md) | Step-by-step guide to start, monitor, and debug services |
 | [l2_tx_lifecycle.md](l2_tx_lifecycle.md) | Trace an L2 tx hash through Pending → Trusted → Virtual → Verified |
+| [validator.md](validator.md) | Validator HTTP service: confirm API, checks, and signature format |
 
 ## Component Overview
 

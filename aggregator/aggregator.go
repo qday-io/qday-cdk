@@ -20,6 +20,7 @@ import (
 	"github.com/0xPolygon/cdk/aggregator/db/dbstorage"
 	ethmanTypes "github.com/0xPolygon/cdk/aggregator/ethmantypes"
 	"github.com/0xPolygon/cdk/aggregator/prover"
+	"github.com/0xPolygon/cdk/aggregator/validatorsign"
 	cdkcommon "github.com/0xPolygon/cdk/common"
 	"github.com/0xPolygon/cdk/config/types"
 	"github.com/0xPolygon/cdk/l1infotree"
@@ -86,6 +87,11 @@ type Aggregator struct {
 	aggLayerClient      agglayer.AgglayerClientInterface
 
 	rpcClient RPCInterface
+
+	// validatorConfirmer collects signatures when validator settlement is enabled.
+	validatorConfirmer validatorsign.Confirmer
+	// pendingValidatorBatch is the final batch of a signature settlement already sent to L1.
+	pendingValidatorBatch atomic.Uint64
 }
 
 // New creates a new aggregator.
@@ -164,6 +170,8 @@ func New(
 	if a.ctx == nil {
 		a.ctx, a.exit = context.WithCancel(a.ctx)
 	}
+
+	a.configureValidatorSettlement()
 
 	// Set function to handle events on L1
 	if !cfg.SyncModeOnlyEnabled {
@@ -312,7 +320,11 @@ func (a *Aggregator) Start() error {
 		}
 	}()
 
-	if !a.cfg.SyncModeOnlyEnabled {
+	if a.cfg.ValidatorSettlementEnabled() {
+		a.logger.Info("ZK prover disabled; settling L1-synced batches with validator signatures")
+		go a.ethTxManager.Start()
+		go a.settleSyncedBatchesWithValidators()
+	} else if !a.cfg.SyncModeOnlyEnabled {
 		address := fmt.Sprintf("%s:%d", a.cfg.Host, a.cfg.Port)
 		lis, err := net.Listen("tcp", address)
 		if err != nil {
@@ -372,7 +384,9 @@ func (a *Aggregator) Start() error {
 // Stop stops the Aggregator server.
 func (a *Aggregator) Stop() {
 	a.exit()
-	a.srv.Stop()
+	if a.srv != nil {
+		a.srv.Stop()
+	}
 }
 
 func (a *Aggregator) logLastVerifiedBatchNumber() {

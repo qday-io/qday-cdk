@@ -90,6 +90,13 @@ WitnessURL = "http://host.docker.internal:8545"
 UseFullWitness = false
 DBPath = "/app/data/aggregator.sqlite"
 SettlementBackend = "l1"                   # "l1" | "agglayer"
+# Non-empty with SettlementBackend "l1": skip the ZK prover. Synced L1 batches
+# are signed by these HTTP validators. The returned signer must equal
+# ValidatorAddress. Signatures go in the existing verifyBatchesTrustedAggregator
+# proof argument.
+Validators = [
+  {URL = "http://xxxx", ValidatorAddress = "0x0000000000000000000000000000000000000000"},
+]
 AggLayerTxTimeout = "5m"
 AggLayerURL = ""
 SyncModeOnlyEnabled = false
