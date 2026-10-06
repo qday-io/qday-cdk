@@ -1,5 +1,5 @@
 # =============================================================================
-# CDK Example - sequence-sender + aggregator (+ prover)
+# CDK Example - sequence-sender + aggregator + validator
 # =============================================================================
 # Prerequisites:
 #   1. L1 chain with zkEVM contracts deployed (RollupManager, Bridge, GER, etc)
@@ -9,8 +9,10 @@
 #   3. L2 node (cdk-erigon) must be running externally, providing:
 #        - RPC port (default 8123)
 #        - Data Streamer port (default 6900)
-#   4. ZK prover connects to the aggregator's gRPC port (50081) as a client.
-#      Uses a pre-built image with all proving files included.
+#   4. No ZK prover is used. The aggregator settles L1-synced batches with
+#      signatures from the validator service (see qday/docs/validator.md).
+#      The validator key is injected via VALIDATOR_PRIVATE_KEY in .env and its
+#      address must match ValidatorAddress in cdk-node-config.toml.
 #
 # Usage:
 #   cp env-example .env
@@ -25,20 +27,24 @@ networks:
     driver: bridge
 
 services:
-  # ---- ZK Prover -------------------------------------------------------------
-  # Stateless ZK prover. Acts as a gRPC client and connects to the aggregator.
-  zkevm-prover:
-    image: ${ZKEVM_PROVER_IMAGE}
-    container_name: cdk-zkevm-prover
+  # ---- Validator -------------------------------------------------------------
+  # Standalone batch confirmation service. Holds one secp256k1 key, re-checks
+  # the batch range against its own L1/L2 endpoints, and signs only when all
+  # checks pass. The aggregator POSTs settlement requests to http://validator:9001.
+  validator:
+    image: ${VALIDATOR_IMAGE}
+    container_name: cdk-validator
+    environment:
+      - LISTEN=:9001
+      - VALIDATOR_PRIVATE_KEY=${VALIDATOR_PRIVATE_KEY}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
-      - ./prover.config.json:/usr/src/app/config.json:ro
-      - ./data/prover:/usr/src/app/output
-    command:
-      - "zkProver"
-      - "-c"
-      - "/usr/src/app/config.json"
+      - ./validator-config.toml:/config/config.toml:ro
     networks:
       - cdk-net
+    ports:
+      - "9001:9001"
     restart: unless-stopped
 
   # ---- Sequence Sender -------------------------------------------------------
@@ -72,7 +78,7 @@ services:
     restart: unless-stopped
 
   # ---- Aggregator ------------------------------------------------------------
-  # Generates and settles ZK proofs to L1 or AggLayer
+  # Settles L1-synced batches to L1 with validator signatures (no ZK prover)
   aggregator:
     image: ${CDK_NODE_IMAGE}
     container_name: cdk-aggregator
@@ -93,8 +99,6 @@ services:
       - ./data/aggregator:/app/data
     networks:
       - cdk-net
-    ports:
-      - "50081:50081"
     healthcheck:
       test: ["CMD", "pgrep", "cdk-node"]
       interval: 10s
@@ -102,6 +106,6 @@ services:
       retries: 3
       start_period: 30s
     depends_on:
-      zkevm-prover:
+      validator:
         condition: service_started
     restart: unless-stopped

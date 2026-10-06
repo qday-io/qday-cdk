@@ -94,8 +94,11 @@ SettlementBackend = "l1"                   # "l1" | "agglayer"
 # are signed by these HTTP validators. The returned signer must equal
 # ValidatorAddress. Signatures go in the existing verifyBatchesTrustedAggregator
 # proof argument.
+# The bundled validator runs as the "validator" compose service. Its key is
+# injected via VALIDATOR_PRIVATE_KEY in .env; the address below is the
+# Hardhat test key #2 bundled with this example. Replace both for production.
 Validators = [
-  {URL = "http://xxxx", ValidatorAddress = "0x0000000000000000000000000000000000000000"},
+  {URL = "http://validator:9001", ValidatorAddress = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"},
 ]
 AggLayerTxTimeout = "5m"
 AggLayerURL = ""
