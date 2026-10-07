@@ -22,10 +22,10 @@ Outputs = ["stderr"]
 # ---- L1 Config (fill in after deploying zkEVM contracts) ---------------------
 [L1Config]
 chainId = 31337                             # L1 chain ID
-polygonZkEVMGlobalExitRootAddress = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
-polygonRollupManagerAddress = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1"
-polTokenAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
-polygonZkEVMAddress = "0x24B3c7704709ed1491473F30393FFc93cFB0FC34"
+polygonZkEVMGlobalExitRootAddress = "0x00886beAdB0f734ee34763A62d1e05beddaBF27F"
+polygonRollupManagerAddress = "0x301C9c352800047FF669327a20c01C4179715139"
+polTokenAddress = "0x7e385647f074d57701f18c5Eba49D8300d13c100"
+polygonZkEVMAddress = "0x4Ef407C4a09A976557af1106da1ECC1c4522C093"
 
 # ---- Etherman (L1 client used by runL1ClientIfNeeded) ------------------------
 [Etherman]
@@ -38,7 +38,7 @@ WaitPeriodSendSequence = "15s"
 LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
 L1BlockTimestampMargin = "30s"
 MaxTxSizeForL1 = 131072
-L2Coinbase = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+L2Coinbase = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 PrivateKey = {Path = "/app/keystores/sequencer.keystore", Password = "testonly"}
 SequencesTxFileName = "sequencesender.json"
 GasOffset = 80000
@@ -140,7 +140,7 @@ DataSource = "file:/app/data/aggregator_sync_db.sqlite"
 [Aggregator.Synchronizer.Synchronizer]
 SyncInterval = "10s"
 SyncChunkSize = 1000
-GenesisBlockNumber = 88229
+GenesisBlockNumber = 756948
 SyncUpToBlock = "finalized"
 BlockFinality = "finalized"
 OverrideStorageCheck = false
@@ -152,9 +152,9 @@ L1ChainID = 31337
 ParallelBlockRequest = false
 
 [Aggregator.Synchronizer.Etherman.Contracts]
-GlobalExitRootManagerAddr = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
-RollupManagerAddr = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1"
-ZkEVMAddr = "0x24B3c7704709ed1491473F30393FFc93cFB0FC34"
+GlobalExitRootManagerAddr = "0x00886beAdB0f734ee34763A62d1e05beddaBF27F"
+RollupManagerAddr = "0x301C9c352800047FF669327a20c01C4179715139"
+ZkEVMAddr = "0x4Ef407C4a09A976557af1106da1ECC1c4522C093"
 
 [Aggregator.Synchronizer.Etherman.Validium]
 Enabled = false
@@ -181,12 +181,12 @@ CheckReorgsInterval = "5s"
 # ---- L1 Info Tree Sync -------------------------------------------------------
 [L1InfoTreeSync]
 DBPath = "/app/data/l1infotreesync.sqlite"
-GlobalExitRootAddr = "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
-RollupManagerAddr = "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1"
+GlobalExitRootAddr = "0x00886beAdB0f734ee34763A62d1e05beddaBF27F"
+RollupManagerAddr = "0x301C9c352800047FF669327a20c01C4179715139"
 URLRPCL1 = "http://host.docker.internal:1545"
 SyncBlockChunkSize = 100
 BlockFinality = "FinalizedBlock"
 WaitForNewBlocksPeriod = "5s"
-InitialBlock = 88215
+InitialBlock = 756948
 RetryAfterErrorPeriod = "10s"
 MaxRetryAttemptsAfterError = 0
