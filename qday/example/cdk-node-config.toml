@@ -34,9 +34,9 @@ ForkIDChunkSize = 100
 
 # ---- Sequence Sender ---------------------------------------------------------
 [SequenceSender]
-WaitPeriodSendSequence = "15s"
-LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
-L1BlockTimestampMargin = "30s"
+WaitPeriodSendSequence = "5s"
+LastBatchVirtualizationTimeMaxWaitPeriod = "5s"
+L1BlockTimestampMargin = "15s"
 MaxTxSizeForL1 = 131072
 L2Coinbase = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 PrivateKey = {Path = "/app/keystores/sequencer.keystore", Password = "testonly"}
@@ -45,9 +45,9 @@ GasOffset = 80000
 WaitPeriodPurgeTxFile = "15m"
 MaxPendingTx = 1
 MaxBatchesForL1 = 300
-BlockFinality = "FinalizedBlock"
+BlockFinality = "LatestBlock"
 RPCURL = "http://host.docker.internal:8545"          # L2 RPC (cdk-erigon)
-GetBatchWaitInterval = "10s"
+GetBatchWaitInterval = "2s"
 
 [SequenceSender.EthTxManager]
 FrequencyToMonitorTxs = "1s"
@@ -62,8 +62,8 @@ GasPriceMarginFactor = 1
 MaxGasPriceLimit = 0
 StoragePath = "/app/data/ethtxmanager.db"
 ReadPendingL1Txs = false
-SafeStatusL1NumberOfBlocks = 5
-FinalizedStatusL1NumberOfBlocks = 10
+SafeStatusL1NumberOfBlocks = 0
+FinalizedStatusL1NumberOfBlocks = 0
 
 [SequenceSender.EthTxManager.Etherman]
 URL = "http://host.docker.internal:1545"                     # L1 RPC
@@ -76,7 +76,7 @@ HTTPHeaders = []
 Host = "0.0.0.0"
 Port = 50081
 RetryTime = "5s"
-VerifyProofInterval = "10s"
+VerifyProofInterval = "2s"
 ProofStatePollingInterval = "5s"
 BatchProofSanityCheckEnabled = true
 ChainID = 44005
@@ -84,7 +84,7 @@ ForkId = 12
 SenderAddress = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
 CleanupLockedProofsInterval = "2m"
 GeneratingProofCleanupThreshold = "10m"
-GasOffset = 0
+GasOffset = 50000
 RPCURL = "http://host.docker.internal:8545"           # L2 RPC (fetch batch/witness)
 WitnessURL = "http://host.docker.internal:8545"
 UseFullWitness = false
@@ -119,10 +119,10 @@ PrivateKeys = [
     {Path = "/app/keystores/aggregator.keystore", Password = "testonly"},
 ]
 ForcedGas = 0
-GasPriceMarginFactor = 1
+GasPriceMarginFactor = 1.2
 MaxGasPriceLimit = 0
 StoragePath = "/app/data/aggregator_ethtx.db"
-ReadPendingL1Txs = false
+ReadPendingL1Txs = true
 SafeStatusL1NumberOfBlocks = 0
 FinalizedStatusL1NumberOfBlocks = 0
 
@@ -138,18 +138,19 @@ DriverName = "sqlite3"
 DataSource = "file:/app/data/aggregator_sync_db.sqlite"
 
 [Aggregator.Synchronizer.Synchronizer]
-SyncInterval = "10s"
-SyncChunkSize = 1000
+SyncInterval = "2s"
+SyncChunkSize = 5000
 GenesisBlockNumber = 756948
-SyncUpToBlock = "finalized"
-BlockFinality = "finalized"
-OverrideStorageCheck = false
+SyncUpToBlock = "latest"
+BlockFinality = "latest"
+# Catch-up only. Set back to false after lastVerifiedBatch meets the virtual batch.
+OverrideStorageCheck = true
 
 [Aggregator.Synchronizer.Etherman]
 L1URL = "http://host.docker.internal:1545"
 ForkIDChunkSize = 100
 L1ChainID = 31337
-ParallelBlockRequest = false
+ParallelBlockRequest = true
 
 [Aggregator.Synchronizer.Etherman.Contracts]
 GlobalExitRootManagerAddr = "0x00886beAdB0f734ee34763A62d1e05beddaBF27F"
@@ -185,8 +186,8 @@ GlobalExitRootAddr = "0x00886beAdB0f734ee34763A62d1e05beddaBF27F"
 RollupManagerAddr = "0x301C9c352800047FF669327a20c01C4179715139"
 URLRPCL1 = "http://host.docker.internal:1545"
 SyncBlockChunkSize = 100
-BlockFinality = "FinalizedBlock"
-WaitForNewBlocksPeriod = "5s"
+BlockFinality = "LatestBlock"
+WaitForNewBlocksPeriod = "1s"
 InitialBlock = 756948
 RetryAfterErrorPeriod = "10s"
 MaxRetryAttemptsAfterError = 0
