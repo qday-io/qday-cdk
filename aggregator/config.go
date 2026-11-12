@@ -3,11 +3,14 @@ package aggregator
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
+	"github.com/0xPolygon/cdk/aggregator/validatorsign"
 	"github.com/0xPolygon/cdk/config/types"
 	"github.com/0xPolygon/cdk/log"
 	"github.com/0xPolygon/zkevm-ethtx-manager/ethtxmanager"
 	syncronizerConfig "github.com/0xPolygonHermez/zkevm-synchronizer-l1/config"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // SettlementBackend is the type of the settlement backend
@@ -124,6 +127,13 @@ type Config struct {
 	// It can be settled directly to L1 or over Agglayer.
 	SettlementBackend SettlementBackend `mapstructure:"SettlementBackend" jsonschema:"enum=agglayer,enum=l1"`
 
+	// Validators confirm an L1-synced batch before it is settled.
+	// When SettlementBackend is "l1" and this list is not empty, the aggregator does not
+	// use the ZK prover. Each entry has a URL and the address that must sign.
+	// The returned signer must equal ValidatorAddress. Signatures are packed into the
+	// existing verifyBatchesTrustedAggregator proof argument.
+	Validators []Validator `mapstructure:"Validators"`
+
 	// SequencerPrivateKey Private key of the trusted sequencer
 	SequencerPrivateKey types.KeystoreFileConfig `mapstructure:"SequencerPrivateKey"`
 
@@ -136,4 +146,47 @@ type Config struct {
 	// SyncModeOnlyEnabled is a flag that activates sync mode exclusively.
 	// When enabled, the aggregator will sync data only from L1 and will not generate or read the data stream.
 	SyncModeOnlyEnabled bool `mapstructure:"SyncModeOnlyEnabled"`
+}
+
+// Validator is one HTTP signer used before L1 settlement.
+type Validator struct {
+	URL              string `mapstructure:"URL"`
+	ValidatorAddress string `mapstructure:"ValidatorAddress"`
+}
+
+// ValidatorEndpoints returns validators that have a URL or address set.
+// Each returned signer must match ValidatorAddress.
+func (c Config) ValidatorEndpoints() ([]validatorsign.Endpoint, error) {
+	endpoints := make([]validatorsign.Endpoint, 0, len(c.Validators))
+	for _, validator := range c.configuredValidators() {
+		url := strings.TrimSpace(validator.URL)
+		address := strings.TrimSpace(validator.ValidatorAddress)
+		if url == "" || !common.IsHexAddress(address) {
+			return nil, fmt.Errorf("validator requires URL and ValidatorAddress, got url=%q address=%q", url, address)
+		}
+		endpoints = append(endpoints, validatorsign.Endpoint{
+			URL:     url,
+			Address: common.HexToAddress(address),
+		})
+	}
+
+	return endpoints, nil
+}
+
+func (c Config) configuredValidators() []Validator {
+	validators := make([]Validator, 0, len(c.Validators))
+	for _, validator := range c.Validators {
+		if strings.TrimSpace(validator.URL) == "" && strings.TrimSpace(validator.ValidatorAddress) == "" {
+			continue
+		}
+		validators = append(validators, validator)
+	}
+
+	return validators
+}
+
+// ValidatorSettlementEnabled reports whether L1 settlement must collect validator
+// signatures and skip the ZK prover.
+func (c Config) ValidatorSettlementEnabled() bool {
+	return c.SettlementBackend == L1 && len(c.configuredValidators()) > 0
 }

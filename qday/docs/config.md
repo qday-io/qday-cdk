@@ -136,6 +136,7 @@ Proof generation and settlement engine.
 | `UseFullWitness` | bool | `false` | Use full witness data instead of compact. |
 | `DBPath` | string | - | SQLite database path for aggregator state. |
 | `SettlementBackend` | string | `"l1"` | Settlement target. `"l1"` = settle proofs directly on L1; `"agglayer"` = use AggLayer. |
+| `Validators` | []table | `[]` | Validators that sign an L1-synced batch. Each entry is `{URL, ValidatorAddress}`. When `SettlementBackend` is `"l1"` and this list is not empty, the aggregator does not use the ZK prover. It POSTs the synced batch to each URL and accepts the response only when `signer` equals `ValidatorAddress`. Signatures are packed into the existing `verifyBatchesTrustedAggregator` `proof` argument. See [validator.md](validator.md). |
 | `AggLayerTxTimeout` | duration | `"5m"` | Timeout for AggLayer settlement transactions. |
 | `AggLayerURL` | string | - | AggLayer API URL (required if SettlementBackend = `"agglayer"`). |
 | `SyncModeOnlyEnabled` | bool | `false` | Only sync data without generating proofs (read-only mode). |

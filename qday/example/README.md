@@ -1,12 +1,11 @@
-# CDK Example - sequence-sender + aggregator
+# CDK Example - sequence-sender + aggregator + validator
 
-This example demonstrates running CDK with `sequence-sender` and `aggregator` as separate Docker Compose services.
+This example demonstrates running CDK with `sequence-sender` and `aggregator` as separate Docker Compose services. No ZK prover is used: the aggregator settles L1-synced batches with signatures from the bundled validator service (see `qday/docs/validator.md`).
 
 ## Prerequisites
 
 - L1 chain with zkEVM contracts deployed (RollupManager, Bridge, GlobalExitRoot, etc.)
 - L2 execution node (cdk-erigon) providing RPC at `http://127.0.0.1:8123`
-- ZK prover image (started by compose as the `zkevm-prover` service)
 - Test keystore files are bundled in `keystores/` (Hardhat test keys, password `testonly`).
   Replace them with your own keystores for production use.
 
@@ -25,10 +24,16 @@ docker compose -f qday/example/docker-compose.yml up -d
 docker compose -f qday/example/docker-compose.yml logs -f
 ```
 
-The prover runs in **mock mode** (`runAggregatorClientMock: true`) for testnet
-use. The prover image includes all necessary config files. For production,
-set `runAggregatorClientMock` to `false` in `prover.config.json` and download
-real proving files (~75GB) via `./download-prover-files.sh`.
+The aggregator runs with `SettlementBackend = "l1"` and a non-empty `Validators`
+list, so the ZK prover is never started. Before calling
+`verifyBatchesTrustedAggregator` on L1, the aggregator asks the validator to
+sign the synced batch range. The validator independently re-checks the range
+against its own L1/L2 endpoints and only signs when everything matches.
+
+The bundled validator signs with the Hardhat test key #2
+(`0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC`), injected via
+`VALIDATOR_PRIVATE_KEY` in `.env`. For production, set your own key in `.env`
+and update `ValidatorAddress` in `cdk-node-config.toml` to match.
 
 The published CDK node image (`ghcr.io/qday-io/qday-cdk:qday-v0.5.4-fork12`) is pulled automatically.
 To run a locally built image instead, build it with `make build-docker`
@@ -38,10 +43,9 @@ To run a locally built image instead, build it with `make build-docker`
 
 | File | Description |
 |------|-------------|
-| `docker-compose.yml` | Docker Compose orchestration for prover, sequence-sender and aggregator |
+| `docker-compose.yml` | Docker Compose orchestration for validator, sequence-sender and aggregator |
 | `cdk-node-config.toml` | CDK node configuration file |
-| `prover.config.json` | Stateless ZK prover configuration (connects to the aggregator gRPC server) |
-| `download-prover-files.sh` | Script to download real ZK proving files (~75GB, production) |
+| `validator-config.toml` | Validator service configuration (L1/L2 RPCs, rollup id) |
 | `keystores/sequencer.keystore` | Sequencer keystore (Hardhat test key, password `testonly`) |
 | `keystores/aggregator.keystore` | Aggregator keystore (Hardhat test key, password `testonly`) |
 | `env-example` | Environment variable template (copy to `.env`) |
@@ -51,6 +55,6 @@ To run a locally built image instead, build it with `make build-docker`
 
 | Service | Container Name | Purpose |
 |---------|---------------|---------|
-| `zkevm-prover` | `cdk-zkevm-prover` | Stateless ZK prover, connects to aggregator gRPC to compute proofs |
+| `validator` | `cdk-validator` | Batch confirmation service; signs synced batch ranges after independent L1/L2 checks |
 | `sequence-sender` | `cdk-sequence-sender` | Sends L2 batches to L1 rollup contract |
-| `aggregator` | `cdk-aggregator` | Generates ZK proofs and settles to L1 |
+| `aggregator` | `cdk-aggregator` | Collects validator signatures and settles batches to L1 |

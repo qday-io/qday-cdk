@@ -30,6 +30,15 @@ impl Default for Etherman {
     }
 }
 
+/// One HTTP validator that must sign a batch before L1 settlement.
+#[derive(Deserialize, Debug, Clone, Default)]
+pub struct Validator {
+    #[serde(rename = "URL", default)]
+    pub url: String,
+    #[serde(rename = "ValidatorAddress", default)]
+    pub validator_address: String,
+}
+
 /// The Aggregator configuration.
 #[derive(Deserialize, Debug, Clone)]
 pub struct Aggregator {
@@ -75,6 +84,8 @@ pub struct Aggregator {
     pub use_full_witness: bool,
     #[serde(rename = "SyncModeOnlyEnabled", default)]
     pub sync_mode_only_enabled: bool,
+    #[serde(rename = "Validators", default)]
+    pub validators: Vec<Validator>,
 
     #[serde(rename = "EthTxManager", default)]
     pub eth_tx_manager: EthTxManager,
@@ -115,6 +126,7 @@ impl Default for Aggregator {
             agg_layer_url: Url::parse("http://localhost:8547").unwrap(),
             use_full_witness: false,
             sync_mode_only_enabled: false,
+            validators: Vec::new(),
             eth_tx_manager: EthTxManager {
                 etherman: Etherman {
                     url: "http://localhost:9093".to_string(),

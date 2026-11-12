@@ -134,6 +134,7 @@ RPCURL = "{{L2URL}}"
 WitnessURL = "{{WitnessURL}}"
 UseFullWitness = false
 SettlementBackend = "l1"
+Validators = []
 AggLayerTxTimeout = "5m"
 AggLayerURL = "{{AggLayerURL}}"
 SyncModeOnlyEnabled = false
