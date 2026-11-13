@@ -86,7 +86,7 @@ The aggregator recovers the signer from the signature. Recovery must equal `sign
 
 ## 3. Checks before signing
 
-The aggregator already compares `BatchL2Data` for every batch from `initNumBatch + 1` through `finalNewBatch` (batch `1` is skipped; it is the injected batch). The validator must repeat the checks against its own L1 and L2 endpoints. Sign only when all of them pass.
+The aggregator first looks at `BatchesPerSettlement` batches after the latest verified batch (`0` means the whole virtual range). It uses the highest batch in that window whose L1 `accInputHash` is not empty, and takes that batch's state root and local exit root from L2. If every `accInputHash` in the window is empty, it searches the next window of the same size, up to the latest virtual batch. An RPC or contract error, or an empty state root on a batch that already has an `accInputHash`, waits for the next round. The validator must repeat the checks against its own L1 and L2 endpoints. Sign only when all of them pass.
 
 1. `rollupId` is the rollup this validator is responsible for.
 2. `finalNewBatch` > `initNumBatch`.

@@ -100,6 +100,11 @@ SettlementBackend = "l1"                   # "l1" | "agglayer"
 Validators = [
   {URL = "http://validator:9001", ValidatorAddress = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"},
 ]
+# First window of batches to search, starting at lastVerified+1.
+# The round uses the highest batch in that window with a non-empty accInputHash.
+# If every hash in the window is empty, the search steps forward by this size
+# until the latest virtual batch. 0 searches the whole virtual range at once.
+BatchesPerSettlement = 10
 AggLayerTxTimeout = "5m"
 AggLayerURL = ""
 SyncModeOnlyEnabled = false

@@ -1,9 +1,7 @@
 package aggregator
 
 import (
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -13,7 +11,6 @@ import (
 	"github.com/0xPolygon/cdk/aggregator/validatorsign"
 	rpctypes "github.com/0xPolygon/cdk/rpc/types"
 	ethtxtypes "github.com/0xPolygon/zkevm-ethtx-manager/types"
-	"github.com/0xPolygonHermez/zkevm-synchronizer-l1/state/entities"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -29,7 +26,7 @@ func (a *Aggregator) configureValidatorSettlement() {
 }
 
 // settleSyncedBatchesWithValidators repeats settlement on a fixed interval.
-// A failed BatchL2Data check, a validator rejection, or a tx send error is logged,
+// A missing accInputHash, a validator rejection, or a tx send error is logged,
 // then the same batch range is retried after the wait. There is no retry limit.
 // The wait is VerifyProofInterval, or RetryTime when that interval is unset or zero.
 func (a *Aggregator) settleSyncedBatchesWithValidators() {
@@ -45,8 +42,8 @@ func (a *Aggregator) settleSyncedBatchesWithValidators() {
 		default:
 		}
 
-		// One round: load synced batches, check each BatchL2Data, collect validator
-		// signatures, and submit the existing L1 function.
+		// One round: choose a final batch inside the configured window, collect
+		// validator signatures, and submit the existing L1 function.
 		if err := a.settleNextSyncedRange(a.ctx); err != nil {
 			a.logger.Errorf("failed to settle L1-synced batches with validator signatures: %v", err)
 		}
@@ -63,7 +60,7 @@ func (a *Aggregator) settleSyncedBatchesWithValidators() {
 // A nil error and no transaction means there is nothing new, or the previous
 // settlement is still waiting to show up on L1.
 func (a *Aggregator) settleNextSyncedRange(ctx context.Context) error {
-	// 1. Read the verified batch through the latest virtual batch and check BatchL2Data on each.
+	// 1. Read the verified batch through the latest virtual batch and pick a final batch.
 	req, ok, err := a.syncedBatchSettlement(ctx)
 	if err != nil || !ok {
 		return err
@@ -144,8 +141,9 @@ func (a *Aggregator) settleNextSyncedRange(ctx context.Context) error {
 
 // syncedBatchSettlement loads the batch range for this round.
 // (nil, false, nil) means wait for the next round: nothing new, a previous tx is
-// still pending, a batch is not synced yet, or the final state root is still empty.
-// A non-nil error is a check or read failure. The outer loop retries after the interval.
+// still pending, a sequenced batch has an empty state root, or no accInputHash
+// exists through the latest virtual batch.
+// A non-nil error is an RPC or contract read failure. The outer loop retries after the interval.
 func (a *Aggregator) syncedBatchSettlement(ctx context.Context) (*validatorsign.Request, bool, error) {
 	// 1. Read the latest batch already verified on the contract.
 	//    The new range starts at lastVerified+1.
@@ -164,7 +162,6 @@ func (a *Aggregator) syncedBatchSettlement(ctx context.Context) (*validatorsign.
 	a.pendingValidatorBatch.Store(0)
 
 	// 3. Read the newest virtual batch known to the synchronizer.
-	//    One settlement covers lastVerified+1 through this batch.
 	latestVirtual, err := a.l1Syncr.GetLastestVirtualBatchNumber(ctx)
 	if err != nil {
 		return nil, false, fmt.Errorf("get latest virtual batch: %w", err)
@@ -174,74 +171,103 @@ func (a *Aggregator) syncedBatchSettlement(ctx context.Context) (*validatorsign.
 		return nil, false, nil
 	}
 
-	// 4. Check BatchL2Data on every batch in the range, matching getAndLockBatchToProve.
-	//    Any mismatch or unsynced batch blocks the whole range. Keep the last batch;
-	//    the contract call carries only that batch's roots.
-	var finalBatch *rpctypes.RPCBatch
-	for batchNumber := lastVerified + 1; batchNumber <= latestVirtual; batchNumber++ {
-		rpcBatch, err := a.checkBatchL2Data(ctx, batchNumber)
-		if err != nil || rpcBatch == nil {
-			return nil, false, err
-		}
-		finalBatch = rpcBatch
-	}
-	// 5. An empty state root means the L2 node has not finished executing the final batch.
-	if finalBatch.StateRoot() == (common.Hash{}) {
-		a.logger.Infof("synced batch %d state root is not ready", latestVirtual)
-		return nil, false, nil
+	// 4. The contract call carries one final batch. Search windows of
+	//    BatchesPerSettlement. A window whose accInputHashes are all empty
+	//    extends the limit. An RPC error or an empty state root waits for the next round.
+	finalBatch, accInputHash, ok, err := a.settlementFinalBatch(ctx, lastVerified, latestVirtual)
+	if err != nil || !ok {
+		return nil, false, err
 	}
 
-	// 6. Read the accInputHash stored on L1 when the final batch was sequenced.
-	//    Validators sign it as the identity of that batch. It is not a contract argument.
-	accInputHash, err := a.etherman.GetBatchAccInputHash(ctx, latestVirtual)
-	if err != nil {
-		return nil, false, fmt.Errorf("get acc input hash for batch %d: %w", latestVirtual, err)
-	}
-
-	// 7. Build the payload validators sign: rollup id, the batch range, and the
+	// 5. Build the payload validators sign: rollup id, the batch range, and the
 	//    final batch's local exit root, state root, and accInputHash.
 	return &validatorsign.Request{
 		RollupID:         a.etherman.GetRollupId(),
 		InitNumBatch:     lastVerified,
-		FinalNewBatch:    latestVirtual,
+		FinalNewBatch:    finalBatch.BatchNumber(),
 		NewLocalExitRoot: finalBatch.LocalExitRoot(),
 		NewStateRoot:     finalBatch.StateRoot(),
 		AccInputHash:     accInputHash,
 	}, true, nil
 }
 
-// checkBatchL2Data checks one batch.
-// It compares the synchronizer's virtualBatch.BatchL2Data with the L2 RPC L2Data.
-// Batch 1 is the injected batch and is skipped, matching getAndLockBatchToProve.
-// (nil, nil) means the batch is not synced yet and the caller should wait for the next round.
-func (a *Aggregator) checkBatchL2Data(ctx context.Context, batchNumber uint64) (*rpctypes.RPCBatch, error) {
-	virtualBatch, err := a.l1Syncr.GetVirtualBatchByBatchNumber(ctx, batchNumber)
-	if err != nil {
-		if errors.Is(err, entities.ErrNotFound) {
-			a.logger.Infof("virtual batch %d has not been synced yet", batchNumber)
-			return nil, nil
+// settlementLimit is the highest batch number of one search window.
+// batchesPerSettlement counts forward from floor. Zero uses latestVirtual.
+func settlementLimit(floor, latestVirtual, batchesPerSettlement uint64) uint64 {
+	remaining := latestVirtual - floor
+	if batchesPerSettlement == 0 || remaining <= batchesPerSettlement {
+		return latestVirtual
+	}
+
+	return floor + batchesPerSettlement
+}
+
+type settlementScan int
+
+const (
+	settlementHashesEmpty settlementScan = iota
+	settlementFound
+	settlementReadError
+	settlementStateRootNotReady
+)
+
+// settlementFinalBatch selects the final batch for this round.
+// Each window is BatchesPerSettlement long. Inside a window the highest batch
+// with a non-empty accInputHash is the candidate.
+// An RPC or contract error, or an empty state root, stops the round so the
+// outer loop can retry the same range. A window of empty accInputHashes raises
+// the limit by another BatchesPerSettlement and the search continues, up to latestVirtual.
+func (a *Aggregator) settlementFinalBatch(
+	ctx context.Context, lastVerified, latestVirtual uint64,
+) (*rpctypes.RPCBatch, common.Hash, bool, error) {
+	floor := lastVerified
+	limit := settlementLimit(floor, latestVirtual, a.cfg.BatchesPerSettlement)
+	for {
+		batch, accInputHash, scan, err := a.scanSettlementWindow(ctx, floor, limit)
+		switch scan {
+		case settlementFound:
+			return batch, accInputHash, true, nil
+		case settlementReadError:
+			return nil, common.Hash{}, false, err
+		case settlementStateRootNotReady:
+			return nil, common.Hash{}, false, nil
+		default:
+			if limit >= latestVirtual {
+				a.logger.Infof("no acc input hash from batch %d through %d", lastVerified+1, latestVirtual)
+				return nil, common.Hash{}, false, nil
+			}
+			a.logger.Infof("no acc input hash from batch %d through %d; raising the limit", floor+1, limit)
+			floor = limit
+			limit = settlementLimit(floor, latestVirtual, a.cfg.BatchesPerSettlement)
+		}
+	}
+}
+
+// scanSettlementWindow walks one window from limit down to floor+1.
+func (a *Aggregator) scanSettlementWindow(
+	ctx context.Context, floor, limit uint64,
+) (*rpctypes.RPCBatch, common.Hash, settlementScan, error) {
+	for batchNumber := limit; batchNumber > floor; batchNumber-- {
+		accInputHash, err := a.etherman.GetBatchAccInputHash(ctx, batchNumber)
+		if err != nil {
+			return nil, common.Hash{}, settlementReadError, fmt.Errorf("get acc input hash for batch %d: %w", batchNumber, err)
+		}
+		if accInputHash == (common.Hash{}) {
+			a.logger.Infof("batch %d acc input hash is empty", batchNumber)
+			continue
 		}
 
-		return nil, fmt.Errorf("get virtual batch %d: %w", batchNumber, err)
-	}
-	if virtualBatch == nil {
-		a.logger.Infof("virtual batch %d has not been synced yet", batchNumber)
-		return nil, nil
+		rpcBatch, err := a.rpcClient.GetBatch(batchNumber)
+		if err != nil {
+			return nil, common.Hash{}, settlementReadError, fmt.Errorf("get batch %d from RPC: %w", batchNumber, err)
+		}
+		if rpcBatch.StateRoot() == (common.Hash{}) {
+			a.logger.Infof("batch %d state root is not ready", batchNumber)
+			return nil, common.Hash{}, settlementStateRootNotReady, nil
+		}
+
+		return rpcBatch, accInputHash, settlementFound, nil
 	}
 
-	rpcBatch, err := a.rpcClient.GetBatch(batchNumber)
-	if err != nil {
-		return nil, fmt.Errorf("get batch %d from RPC: %w", batchNumber, err)
-	}
-	// A byte mismatch fails the round. The outer loop retries after VerifyProofInterval
-	// and does not ask validators or submit this range to L1.
-	if batchNumber != 1 && !bytes.Equal(virtualBatch.BatchL2Data, rpcBatch.L2Data()) {
-		a.logger.Warnf("BatchL2Data from virtual batch %d does not match the one from RPC", batchNumber)
-		a.logger.Warnf("VirtualBatch BatchL2Data:%v", common.Bytes2Hex(virtualBatch.BatchL2Data))
-		a.logger.Warnf("RPC BatchL2Data:%v", common.Bytes2Hex(rpcBatch.L2Data()))
-
-		return nil, fmt.Errorf("batch %d BatchL2Data from L1 sync does not match RPC", batchNumber)
-	}
-
-	return rpcBatch, nil
+	return nil, common.Hash{}, settlementHashesEmpty, nil
 }

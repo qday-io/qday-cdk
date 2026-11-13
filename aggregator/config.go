@@ -134,6 +134,13 @@ type Config struct {
 	// existing verifyBatchesTrustedAggregator proof argument.
 	Validators []Validator `mapstructure:"Validators"`
 
+	// BatchesPerSettlement is the first window of batches to search, counting
+	// forward from the latest verified batch. The round uses the highest batch
+	// in that window whose accInputHash is not empty. If every hash in the
+	// window is empty, the search continues in steps of this size up to the
+	// latest virtual batch. Zero searches the whole virtual range at once.
+	BatchesPerSettlement uint64 `mapstructure:"BatchesPerSettlement"`
+
 	// SequencerPrivateKey Private key of the trusted sequencer
 	SequencerPrivateKey types.KeystoreFileConfig `mapstructure:"SequencerPrivateKey"`
 
