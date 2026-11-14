@@ -20,4 +20,4 @@ VALIDATOR_IMAGE=ghcr.io/qday-io/qday-aggregator-valdator:main
 # Validator signing key (32-byte secp256k1 hex, 0x prefix optional).
 # The derived address must match ValidatorAddress in cdk-node-config.toml.
 # Default below is the well-known Hardhat test key #2 - replace for production.
-VALIDATOR_PRIVATE_KEY=0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a
+VALIDATOR_PRIVATE_KEY=0x
